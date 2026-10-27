@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070908">
+  <meta name="description" content="CCB Ⅱ 机车制动显示屏 LCDM 交互仿真：双指针压力表、F1–F8 动态软键、屏幕背光调节、电空制动设置与事件故障记录。">
+  <title>LCDM 制动显示屏 · CCB Ⅱ 交互仿真</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="scene" aria-hidden="true">
+    <span class="scene__glow scene__glow--warm"></span>
+    <span class="scene__glow scene__glow--green"></span>
+    <span class="scene__grid"></span>
+    <span class="scene__vignette"></span>
+    <span class="scene__grain"></span>
+  </div>
+
+  <header class="site-header">
+    <a class="brand" href="#" data-action="home" aria-label="返回 LCDM 主界面">
+      <span class="brand__mark" aria-hidden="true"><span class="brand__ring"><i>K</i></span></span>
+      <span class="brand__copy">
+        <strong>LCDM</strong>
+        <small>机车制动显示屏 · 交互仿真</small>
+      </span>
+    </a>
+
+    <div class="header-state" aria-label="仿真系统状态">
+      <span class="pulse-dot"></span>
+      <span class="header-state__kicker">SIMULATION</span>
+      <b id="headerState">系统正常</b>
+    </div>
+
+    <div class="header-tools">
+      <button class="tool-button tool-button--labeled" type="button" data-action="open-trainer" aria-label="打开教员台">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 12h3M11 12h9M4 17h8M16 17h4"/><circle cx="16" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="14" cy="17" r="2"/></svg>
+        <span>教员台</span>
+      </button>
+      <button class="tool-button tool-button--labeled" type="button" data-action="open-help" aria-label="打开操作指南">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.6"/><path d="M9.7 9.3a2.4 2.4 0 1 1 3.7 2.1c-.8.5-1.4 1-1.4 2.1"/><path d="M12 16.9v.1"/></svg>
+        <span>操作指南</span>
+      </button>
+      <span class="tool-divider" aria-hidden="true"></span>
+      <button class="tool-button" type="button" data-action="toggle-sound" aria-label="切换按键音" aria-pressed="true" title="按键音">
+        <svg class="icon-sound" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.4v5.2h3.4L12 18V6L7.4 9.4H4Z"/><path class="sound-wave" d="M15.6 8.4a5 5 0 0 1 0 7.2"/><path class="sound-wave" d="M18.2 6a8.4 8.4 0 0 1 0 12"/></svg>
+        <svg class="icon-muted" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.4v5.2h3.4L12 18V6L7.4 9.4H4Z"/><path d="m16 9 5 6m0-6-5 6"/></svg>
+      </button>
+      <button class="tool-button" type="button" data-action="fullscreen" aria-label="全屏显示" title="全屏显示">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg>
+      </button>
+      <button class="tool-button" type="button" data-action="open-reset" aria-label="恢复出厂设置" title="恢复出厂设置">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8.7A8 8 0 1 1 4.4 15"/><path d="M5 4.6v4.3h4.3"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section class="stage__lead" aria-label="LCDM 设备">
+      <div class="stage__caption" aria-hidden="true">
+        <span>CCB Ⅱ</span><i></i><span>ELECTRO-PNEUMATIC BRAKE CONTROL</span>
+      </div>
+
+      <article class="lcdm" id="lcdmUnit" aria-label="CCB Ⅱ LCDM 机车制动显示屏">
+        <span class="screw screw--tl" aria-hidden="true"></span>
+        <span class="screw screw--tr" aria-hidden="true"></span>
+        <span class="screw screw--bl" aria-hidden="true"></span>
+        <span class="screw screw--br" aria-hidden="true"></span>
+
+        <header class="lcdm__head">
+          <div class="power-indicator" aria-label="电源指示灯，点亮">
+            <span class="power-indicator__lamp"></span><span class="power-indicator__label">ON</span>
+          </div>
+          <div class="unit-plate"><strong>LCDM</strong><span>LOCOMOTIVE CONTROL DISPLAY MODULE</span></div>
+          <div class="unit-status" aria-hidden="true">
+            <span><i class="status-lamp status-lamp--ok"></i>PWR</span>
+            <span><i class="status-lamp status-lamp--comm"></i>COMM</span>
+            <span><i class="status-lamp status-lamp--auto" id="autoLamp"></i>AUTO</span>
+          </div>
+          <div class="knorr-mark" aria-label="Knorr-Bremse">
+            <svg viewBox="0 0 58 42" aria-hidden="true">
+              <path d="M7 30.5c3.7 6.2 10.4 9.5 17.8 9.5 10.7 0 19.4-7 19.4-17.5S35.5 5 24.8 5C17.4 5 10.7 8.3 7 14.5"/>
+              <path d="M14.2 30.5c2.7 3.5 6.8 5.4 11 5.4 6.6 0 12-4.4 12-11.2s-5.4-11.2-12-11.2c-4.2 0-8.3 1.9-11 5.4"/>
+              <path class="knorr-k" d="M24 13.5v13M24 20.2l6.6-6.7M24 20.2l6.6 6.3"/>
+            </svg>
+          </div>
+        </header>
+
+        <div class="lcdm__body">
+          <aside class="backlight-rail" aria-label="屏幕背光调节键">
+            <span class="backlight-rail__caption">BACKLIGHT</span>
+            <button class="backlight-key" type="button" data-brightness="up" aria-label="增亮屏幕" title="增亮">
+              <span class="backlight-key__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11.4" cy="12" r="3.5"/><path d="M11.4 3.2v2.1M11.4 18.7v2.1M2.6 12h2.1M18.1 12h2.1M5.1 5.7l1.5 1.5M16.2 16.8l1.5 1.5M17.7 5.7l-1.5 1.5M6.6 16.8l-1.5 1.5"/><path d="M20.3 17.6v4.2M18.2 19.7h4.2"/></svg></span>
+              <span class="backlight-key__label">增亮</span><i class="backlight-key__led"></i>
+            </button>
+            <button class="backlight-key" type="button" data-brightness="down" aria-label="减亮屏幕" title="减亮">
+              <span class="backlight-key__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11.4" cy="12" r="3.5"/><path d="M11.4 3.2v2.1M11.4 18.7v2.1M2.6 12h2.1M18.1 12h2.1M5.1 5.7l1.5 1.5M16.2 16.8l1.5 1.5M17.7 5.7l-1.5 1.5M6.6 16.8l-1.5 1.5"/><path d="M18.2 19.7h4.2"/></svg></span>
+              <span class="backlight-key__label">减亮</span><i class="backlight-key__led"></i>
+            </button>
+            <button class="backlight-key" type="button" data-brightness="auto" aria-label="自动亮度" title="自动亮度" aria-pressed="true">
+              <span class="backlight-key__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 3.1v2M12 18.9v2M3.1 12h2M18.9 12h2M5.7 5.7l1.4 1.4M16.9 16.9l1.4 1.4M18.3 5.7l-1.4 1.4M7.1 16.9l-1.4 1.4"/><path d="m14.8 10.1-5.6 4.7M9.2 10.1l5.6 4.7"/></svg></span>
+              <span class="backlight-key__label">自动</span><i class="backlight-key__led"></i>
+            </button>
+            <span class="light-sensor" title="环境光传感器"><i></i><span>AUTO<br>SENSOR</span></span>
+          </aside>
+
+          <div class="display-stack">
+            <div class="screen-bezel">
+              <div class="screen" id="screen" data-brightness-mode="auto">
+                <div class="screen__view" id="screenView" aria-live="off"></div>
+                <span class="screen__dim" id="screenDim" aria-hidden="true"></span>
+                <span class="screen__scanlines" aria-hidden="true"></span>
+                <span class="screen__glare" aria-hidden="true"></span>
+                <span class="screen__smudge" aria-hidden="true"></span>
+                <span class="screen__vignette" aria-hidden="true"></span>
+                <span class="screen__flash" id="screenFlash" aria-hidden="true"></span>
+              </div>
+            </div>
+
+            <div class="softkey-deck" aria-label="F1 至 F8 软键">
+              <div class="softkey-row" id="softkeyRow">
+                <button class="soft-key" type="button" data-softkey="F1" aria-label="软键 F1"><i class="soft-key__led"></i><span class="soft-key__cap">F1</span><span class="soft-key__micro">软键</span></button>
+                <button class="soft-key" type="button" data-softkey="F2" aria-label="软键 F2"><i class="soft-key__led"></i><span class="soft-key__cap">F2</span><span class="soft-key__micro">软键</span></button>
+                <button class="soft-key" type="button" data-softkey="F3" aria-label="软键 F3"><i class="soft-key__led"></i><span class="soft-key__cap">F3</span><span class="soft-key__micro">软键</span></button>
+                <button class="soft-key" type="button" data-softkey="F4" aria-label="软键 F4"><i class="soft-key__led"></i><span class="soft-key__cap">F4</span><span class="soft-key__micro">软键</span></button>
+                <button class="soft-key" type="button" data-softkey="F5" aria-label="软键 F5"><i class="soft-key__led"></i><span class="soft-key__cap">F5</span><span class="soft-key__micro">软键</span></button>
+                <button class="soft-key" type="button" data-softkey="F6" aria-label="软键 F6"><i class="soft-key__led"></i><span class="soft-key__cap">F6</span><span class="soft-key__micro">软键</span></button>
+                <button class="soft-key" type="button" data-softkey="F7" aria-label="软键 F7"><i class="soft-key__led"></i><span class="soft-key__cap">F7</span><span class="soft-key__micro">软键</span></button>
+                <button class="soft-key" type="button" data-softkey="F8" aria-label="软键 F8"><i class="soft-key__led"></i><span class="soft-key__cap">F8</span><span class="soft-key__micro">软键</span></button>
+              </div>
+              <div class="softkey-deck__foot" aria-hidden="true">
+                <span>SOFT KEYS</span><i></i><span>F1 — F8</span><b><i></i>ETH · OK</b>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="lcdm__foot">
+          <span>CCB Ⅱ / LCDM-51</span><span class="lcdm__foot-center">人机接口单元</span><span>S/N 08113A</span>
+        </footer>
+      </article>
+
+      <div class="below-unit">
+        <span class="below-unit__hint"><kbd>F1</kbd><span>—</span><kbd>F8</kbd> 键盘可直接触发软键</span>
+        <span class="below-unit__dot"></span>
+        <span class="below-unit__hint"><i class="hint-sun">☀</i> 左侧三键调节屏幕背光</span>
+        <span class="below-unit__spacer"></span>
+        <button class="text-link" type="button" data-action="open-trainer">打开教员台 <span aria-hidden="true">↗</span></button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>LCDM INTERACTIVE · CCB Ⅱ BRAKE SYSTEM</span><span class="footer-line"></span>
+    <span>双指针制动压力 · 八组动态软键 · 三组背光调节</span><span class="footer-spacer"></span>
+    <span>教学仿真 · 不用于实际行车操作</span>
+  </footer>
+
+  <div class="toast-region" id="toastRegion" role="status" aria-live="polite"></div>
+  <div class="sr-only" id="srStatus" aria-live="polite"></div>
+
+  <div class="overlay" id="trainerLayer" hidden>
+    <div class="overlay__backdrop" data-action="close-trainer"></div>
+    <aside class="trainer" role="dialog" aria-modal="true" aria-labelledby="trainerTitle">
+      <header class="panel-head">
+        <div><span class="panel-kicker">INSTRUCTOR CONSOLE</span><h2 id="trainerTitle">教员台</h2></div>
+        <button class="panel-close" type="button" data-action="close-trainer" aria-label="关闭教员台"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      </header>
+      <div class="trainer__body">
+        <section class="trainer-card trainer-card--live">
+          <div class="trainer-card__head"><span>实时压力</span><span class="live-badge"><i></i>LIVE</span></div>
+          <div class="live-grid">
+            <div><span>均衡风缸 ER</span><b id="trainerER">501</b><small>kPa</small></div>
+            <div><span>列车管 BP</span><b id="trainerBP">499</b><small>kPa</small></div>
+            <div><span>总风缸 MR</span><b id="trainerMR">905</b><small>kPa</small></div>
+            <div><span>制动缸 BC</span><b id="trainerBC">319</b><small>kPa</small></div>
+          </div>
+          <div class="trainer-state"><span>当前设定</span><b id="trainerSettings">本机 · 货车 · 列车管投入 · 补风</b></div>
+        </section>
+
+        <section class="trainer-card">
+          <div class="trainer-card__head"><span>工况注入</span><span class="trainer-note">仅用于演示</span></div>
+          <div class="scenario-buttons">
+            <button type="button" data-scenario="release"><i class="scenario-dot scenario-dot--green"></i><span>制动缓解</span><small>BP 恢复定压</small></button>
+            <button type="button" data-scenario="service"><i class="scenario-dot scenario-dot--amber"></i><span>常用制动</span><small>BP 减压 140</small></button>
+            <button type="button" data-scenario="emergency"><i class="scenario-dot scenario-dot--red"></i><span>紧急制动</span><small>BP 快速排零</small></button>
+          </div>
+        </section>
+
+        <section class="trainer-card">
+          <div class="trainer-card__head"><span>环境光与背光</span><b class="trainer-brightness" id="trainerBrightness">86%</b></div>
+          <label class="range-row" for="ambientRange">
+            <span><i>☀</i> 环境光</span>
+            <input id="ambientRange" type="range" min="0" max="100" step="1" value="78" aria-label="模拟环境光强度">
+            <output id="ambientValue">78%</output>
+          </label>
+          <div class="brightness-mode-row"><span>当前模式</span><b id="trainerBrightnessMode">自动亮度</b></div>
+          <p class="trainer-help">点击设备左侧的 <b>增亮 / 减亮 / 自动</b> 三键即可手动或自动调节。自动模式会跟随环境光变化。</p>
+        </section>
+
+        <section class="trainer-card trainer-card--log">
+          <div class="trainer-card__head"><span>最近操作</span><button class="mini-link" type="button" data-action="open-records">查看全部记录</button></div>
+          <ul class="mini-log" id="miniLog"></ul>
+        </section>
+      </div>
+      <footer class="trainer__foot">
+        <span>CCB Ⅱ 教学仿真 · 数据仅保存在本机浏览器</span>
+        <button class="button button--ghost button--small" type="button" data-action="close-trainer">返回设备</button>
+      </footer>
+    </aside>
+  </div>
+
+  <div class="overlay" id="helpLayer" hidden>
+    <div class="overlay__backdrop" data-action="close-help"></div>
+    <section class="help-modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <header class="panel-head">
+        <div><span class="panel-kicker">QUICK REFERENCE</span><h2 id="helpTitle">LCDM 操作指南</h2></div>
+        <button class="panel-close" type="button" data-action="close-help" aria-label="关闭操作指南"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      </header>
+      <p class="help-lede">屏幕下方 F1–F8 是随页面变化的软键，按键功能显示在屏幕对应位置。键盘 F1–F8 与实体键等效。</p>
+      <div class="help-columns">
+        <section>
+          <h3><span>01</span>主界面软键</h3>
+          <dl class="help-keylist">
+            <div><dt><kbd>F1</kbd>执行</dt><dd>确认待执行修改，保存设置并立即生效</dd></div>
+            <div><dt><kbd>F2</kbd>存储</dt><dd>存储当前参数，打开事件记录 / 故障履历</dd></div>
+            <div><dt><kbd>F3</kbd>电空制动</dt><dd>进入制动核心设置菜单</dd></div>
+            <div><dt><kbd>F4</kbd>操纵端</dt><dd>本机（操纵端）/ 补机（非操纵端）切换</dd></div>
+            <div><dt><kbd>F5</kbd>列车管</dt><dd>投入 / 切除；补机端自动联锁切除</dd></div>
+            <div><dt><kbd>F6</kbd>货车 / 客车</dt><dd>切换定压：货车 500 kPa，客车 600 kPa</dd></div>
+            <div><dt><kbd>F7</kbd>补风 / 不补风</dt><dd>列车管漏风时是否自动补风</dd></div>
+            <div><dt><kbd>F8</kbd>退出</dt><dd>返回上一级；有未执行修改时放弃并取消</dd></div>
+          </dl>
+        </section>
+        <section>
+          <h3><span>02</span>按键与状态</h3>
+          <div class="help-note-card"><b>先修改，再执行</b><p>按 F4–F7 后，设置先进入琥珀色“待执行”状态。按 <kbd>F1</kbd> 才会写入并生效；按 <kbd>F8</kbd> 放弃全部未执行修改。</p></div>
+          <div class="help-note-card"><b>本机 / 补机联锁</b><p>切为补机时，列车管自动切除；补机端不能执行“列车管投入”。切回本机后可按 F5 再次投入。</p></div>
+          <h3 class="help-subhead"><span>03</span>左侧背光键</h3>
+          <div class="help-light-row"><span><b>☀＋</b>增亮</span><span><b>☀−</b>减亮</span><span><b>AUTO</b>自动亮度</span></div>
+          <p class="help-footnote">自动亮度跟随环境光传感器。可在“教员台”中调整模拟环境光，观察亮度变化。</p>
+        </section>
+      </div>
+      <footer class="help-modal__foot">
+        <span><b>提示</b> 软键功能会随主界面、电空制动设置、记录查询页面动态变化。</span>
+        <button class="button button--primary button--small" type="button" data-action="close-help">开始操作</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="overlay" id="resetLayer" hidden>
+    <div class="overlay__backdrop" data-action="close-reset"></div>
+    <section class="reset-modal" role="alertdialog" aria-modal="true" aria-labelledby="resetTitle">
+      <span class="panel-kicker panel-kicker--danger">SYSTEM RESET</span>
+      <h2 id="resetTitle">恢复出厂设置？</h2>
+      <p>操纵端、列车管、车辆模式、补风、背光、工况和全部记录都将恢复初始状态。此操作不可撤销。</p>
+      <div class="modal-actions">
+        <button class="button button--ghost" type="button" data-action="close-reset">取消</button>
+        <button class="button button--danger" type="button" data-action="confirm-reset">确认恢复</button>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
